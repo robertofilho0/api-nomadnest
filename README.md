@@ -64,7 +64,6 @@ test/                # e2e contra PostgreSQL (e RabbitMQ no CI)
 git clone https://github.com/robertofilho0/api-nomadnest.git
 cd api-nomadnest
 docker compose up --build
-docker compose exec api npx prisma db seed   # opcional: dados de exemplo
 ```
 
 - API: `http://localhost:3000/api`
