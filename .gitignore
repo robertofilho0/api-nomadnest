@@ -1,16 +1,7 @@
-# Node modules
 node_modules/
-
-# Environment variables
+coverage/
 .env
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
+.env.*
+!.env.example
+*.log
 .DS_Store
-
-# Nodemon
-nodemon.json
