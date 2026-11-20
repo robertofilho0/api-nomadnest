@@ -1,0 +1,112 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  NOMAD
+  ADMIN
+}
+
+enum Amenity {
+  wifi
+  cafe
+  ar_condicionado
+  estacionamento
+  sala_reuniao
+  impressora
+  cozinha
+  armarios
+  acessibilidade
+  pet_friendly
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_RESCHEDULED
+  BOOKING_CANCELLED
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String         @db.VarChar(80)
+  email         String         @unique @db.VarChar(150)
+  passwordHash  String         @map("password_hash")
+  role          Role           @default(NOMAD)
+  birthDate     DateTime?      @map("birth_date") @db.Date
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  bookings      Booking[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Space {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String    @db.VarChar(100)
+  description      String?
+  city             String    @db.VarChar(80)
+  address          String    @db.VarChar(200)
+  capacity         Int
+  /// Preço da diária em centavos
+  pricePerDayCents Int       @map("price_per_day_cents")
+  amenities        Amenity[]
+  available        Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  bookings         Booking[]
+
+  @@index([city])
+  @@map("spaces")
+}
+
+/// Reserva por diárias no intervalo [startDate, endDate) (check-in até check-out)
+model Booking {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  spaceId       String         @map("space_id") @db.Uuid
+  startDate     DateTime       @map("start_date") @db.Date
+  endDate       DateTime       @map("end_date") @db.Date
+  days          Int
+  totalCents    Int            @map("total_cents")
+  status        BookingStatus  @default(CONFIRMED)
+  notes         String?        @db.VarChar(500)
+  cancelledAt   DateTime?      @map("cancelled_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space         Space          @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  notifications Notification[]
+
+  @@index([spaceId, status, startDate, endDate])
+  @@index([userId])
+  @@map("bookings")
+}
+
+/// Criada pelo worker que consome os eventos de reserva (RabbitMQ)
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  bookingId String?          @map("booking_id") @db.Uuid
+  type      NotificationType
+  title     String           @db.VarChar(120)
+  message   String
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking   Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
