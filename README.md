@@ -1,164 +1,134 @@
-# 📅 API NomadNest - Node.js + Express + MongoDB
-API para gerenciamento de agendamentos de espaços para nômades digitais, com operações CRUD para usuários, espaços e reservas, controle de acesso via JWT e validação de datas.  
-Desenvolvida com **Node.js 22.x**, **Express 4.x** e **MongoDB 7.x**.  
-O foco deste projeto é exclusivamente back-end, com toda a API já funcional e estruturada.
+# 🏝️ NomadNest API
 
-## 📌 Ajustes e melhorias
-O projeto ainda está em desenvolvimento e as próximas atualizações serão voltadas para as seguintes tarefas:
+[![CI](https://github.com/robertofilho0/api-nomadnest/actions/workflows/ci.yml/badge.svg)](https://github.com/robertofilho0/api-nomadnest/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/express-5-000000?logo=express)
+![MongoDB](https://img.shields.io/badge/mongodb-7-47A248?logo=mongodb&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-- [x] CRUD completo de usuários  
-- [x] CRUD completo de espaços  
-- [x] CRUD completo de reservas  
-- [x] Controle de acesso com JWT (autenticação e rotas protegidas)  
-- [x] Validação de datas sobrepostas para reservas  
-- [ ] Documentação Swagger/OpenAPI detalhada  
-- [ ] Testes automatizados  
-- [ ] Integração com notificações (e-mail/SMS)  
-- [ ] Melhorias em filtros e listagens personalizadas  
+API de reservas de espaços de coworking para nômades digitais: busca de espaços por cidade, comodidades e **disponibilidade no período**, reservas com **prevenção de conflitos**, cálculo de valor, remarcação e cancelamento.
 
-## ✅ O que já foi feito
-**Usuários**  
-- Cadastro, listagem, atualização e exclusão  
-- Proteção de rotas via JWT  
+## ✨ Destaques
 
-**Espaços**  
-- Cadastro, listagem, atualização e exclusão  
-- Campos: `name`, `location`, `pricePerDay`, `amenities`, `available`  
+- **Sem reservas sobrepostas, nem com requisições simultâneas.** Após gravar, a reserva confere se outra conflitante foi criada antes (pela ordem do ObjectId) e se desfaz se for o caso. Assim apenas a primeira vence, sem depender de transações. Isso é coberto por teste com 5 requisições paralelas.
+- **Busca por disponibilidade**: `GET /api/spaces?from=...&to=...` retorna só os espaços livres no período.
+- **Diárias e valor total calculados no servidor**, recalculados na remarcação.
+- **Regras de negócio**: sem reservas no passado, no máximo 90 dias, sem alterar ou cancelar reserva já iniciada, sem remover espaço com reservas futuras e sem reservar espaço desativado.
+- **Permissões**: o visitante consulta espaços, o nômade gerencia **apenas as próprias reservas** (as de outras pessoas retornam `404`, sem revelar que existem) e o admin gerencia espaços, usuários e todas as reservas.
+- Validação com **Zod**, senhas com bcrypt, JWT obrigatório, **Helmet**, **CORS**, **rate limiting** e health check.
+- **Swagger UI** em `/api/docs`, **testes de integração** com MongoDB em memória, **Docker** e **CI**.
 
-**Reservas**  
-- Criar, listar, buscar, atualizar e deletar reservas  
-- Validação de datas para evitar conflitos de agendamento  
+## 🧱 Stack
 
-**Autenticação**  
-- Registro e login de usuários  
-- JWT para autenticação de rotas protegidas  
+Node.js 22+ · Express 5 · MongoDB / Mongoose · JWT · Zod · Jest · Supertest · Docker
 
-**Testes**  
-- Testes manuais de todos os endpoints no Postman  
-- Testes de reservas com validação de datas sobrepostas  
+## 📁 Estrutura
 
-## 💻 Pré-requisitos
-Antes de começar, verifique se você possui:
-
-- **Node.js** 22.x  
-- **npm** 9.x  
-- Banco de dados **MongoDB** configurado  
-- Compatível com **Windows**, **Linux** e **macOS**  
-
-## 🚀 Instalando API NomadNest
-**1. Clone o repositório:**
-```bash
-git clone https://github.com/RobertoTheDev/api-nomadnest.git
-cd api-nomadnest
+```
+src/
+├── app.js / server.js
+├── config/                    # env validado e conexão com o banco
+├── models/                    # User, Space, Booking
+├── services/booking.service.js  # conflitos, concorrência, preço, remarcação e cancelamento
+├── controllers/               # auth, users, spaces, bookings
+├── routes/index.js            # todas as rotas com permissões
+├── validators/schemas.js      # schemas Zod (períodos, filtros e entradas)
+├── middlewares/               # auth, validação, 404 e erros
+└── docs/openapi.json
+scripts/seed.js                # dados de demonstração
+tests/
 ```
 
-**2. Instale as dependências via npm:**
+## 🚀 Como rodar
+
+### Com Docker
+
+```bash
+git clone https://github.com/robertofilho0/api-nomadnest.git
+cd api-nomadnest
+docker compose up --build
+docker compose exec api npm run seed   # opcional: dados de exemplo
+```
+
+### Localmente
+
 ```bash
 npm install
-```
-
-**3. Configure o arquivo .env:**
-```env
-MONGO_URI=mongodb://localhost:27017/nomadnest
-PORT=3000
-JWT_SECRET=sua_chave_secreta
-JWT_EXPIRES=7d
-```
-**4. Inicie o servidor local:**
-```bash
+cp .env.example .env   # defina MONGO_URI e JWT_SECRET
+npm run seed           # opcional
 npm run dev
 ```
-A API estará disponível em: http://localhost:3000
 
-## 📂 Estrutura do Projeto
-````pgsql
-api-nomadnest/
-├── src/
-│ ├── controllers/ # Lógica dos endpoints
-│ │ ├── authController.js
-│ │ ├── userController.js
-│ │ ├── spaceController.js
-│ │ └── bookingController.js
-│ │
-│ ├── models/ # Schemas do MongoDB (Mongoose)
-│ │ ├── User.js
-│ │ ├── Space.js
-│ │ └── Booking.js
-│ │
-│ ├── routes/ # Rotas da API
-│ │ ├── auth.js
-│ │ ├── users.js
-│ │ ├── spaces.js
-│ │ └── bookings.js
-│ │
-│ ├── middlewares/ # Middlewares (ex.: autenticação JWT)
-│ │ ├── requireAuth.js
-│ │ └── validateDates.js
-│ │
-│ ├── utils/ # Funções utilitárias
-│ │ └── helpers.js
-│ │
-│ ├── config/ # Configurações (ex.: DB, JWT)
-│ │ └── db.js
-│ │
-│ └── app.js # Inicialização do Express
-│
-├── tests/ # Testes manuais ou automatizados
-│ └── bookings.test.js
-│
-├── .env # Variáveis de ambiente
-├── package.json
-├── package-lock.json
-├── README.md
-└── nodemon.json # Configuração do nodemon (opcional)
-````
-## 📡 Endpoints da API:
-**🔑 Autenticação (/api/auth)**
+A API sobe em `http://localhost:3000/api` e a documentação em `http://localhost:3000/api/docs`.
 
-| Método | Endpoint           | Auth | Descrição                |
-| ------ | ------------------ | ---- | ------------------------ |
-| POST   | /api/auth/register | ❌    | Registrar novo usuário   |
-| POST   | /api/auth/login    | ❌    | Login e retorno do token |
+**Usuários do seed:** `admin@nomadnest.dev` / `Admin1234` e `nomade@nomadnest.dev` / `Nomade1234`.
 
-**👤 Usuários (/api/users)**
-| Método | Endpoint        | Auth | Descrição                 |
-| ------ | --------------- | ---- | ------------------------- |
-| GET    | /api/users      | 🔒   | Listar todos os usuários  |
-| POST   | /api/users      | 🔒   | Criar novo usuário        |
-| GET    | /api/users/\:id | 🔒   | Exibir usuário específico |
-| PUT    | /api/users/\:id | 🔒   | Atualizar usuário         |
-| DELETE | /api/users/\:id | 🔒   | Remover usuário           |
+## 📚 Endpoints
 
-**🏢 Espaços (/api/spaces)**
-| Método | Endpoint         | Auth | Descrição                |
-| ------ | ---------------- | ---- | ------------------------ |
-| GET    | /api/spaces      | 🔒   | Listar todos os espaços  |
-| POST   | /api/spaces      | 🔒   | Criar novo espaço        |
-| GET    | /api/spaces/\:id | 🔒   | Exibir espaço específico |
-| PUT    | /api/spaces/\:id | 🔒   | Atualizar espaço         |
-| DELETE | /api/spaces/\:id | 🔒   | Remover espaço           |
+| Método   | Rota                           | Acesso     | Descrição                           |
+| -------- | ------------------------------ | ---------- | ----------------------------------- |
+| `POST`   | `/api/auth/register`           | público    | Cadastro                            |
+| `POST`   | `/api/auth/login`              | público    | Login                               |
+| `GET`    | `/api/users/me`                | logado     | Meu perfil                          |
+| `PATCH`  | `/api/users/me`                | logado     | Atualiza meu perfil                 |
+| `GET`    | `/api/users`                   | admin      | Lista usuários                      |
+| `PATCH`  | `/api/users/:id/role`          | admin      | Altera o papel                      |
+| `DELETE` | `/api/users/:id`               | admin      | Remove usuário e reservas           |
+| `GET`    | `/api/spaces`                  | público    | Busca com filtros e disponibilidade |
+| `GET`    | `/api/spaces/:id`              | público    | Detalhes                            |
+| `GET`    | `/api/spaces/:id/availability` | público    | Períodos ocupados em uma janela     |
+| `POST`   | `/api/spaces`                  | admin      | Cadastra espaço                     |
+| `PATCH`  | `/api/spaces/:id`              | admin      | Atualiza espaço                     |
+| `DELETE` | `/api/spaces/:id`              | admin      | Remove (sem reservas futuras)       |
+| `POST`   | `/api/bookings`                | logado     | Cria reserva                        |
+| `GET`    | `/api/bookings`                | logado     | Minhas reservas (admin vê todas)    |
+| `GET`    | `/api/bookings/:id`            | dono/admin | Detalhes                            |
+| `PATCH`  | `/api/bookings/:id`            | dono/admin | Remarca                             |
+| `POST`   | `/api/bookings/:id/cancel`     | dono/admin | Cancela                             |
+| `DELETE` | `/api/bookings/:id`            | admin      | Exclui                              |
 
-**📅 Reservas (/api/bookings)**
-| Método | Endpoint           | Auth | Descrição                          |
-| ------ | ------------------ | ---- | ---------------------------------- |
-| GET    | /api/bookings      | 🔒   | Listar todas as reservas           |
-| POST   | /api/bookings      | 🔒   | Criar reserva (validação de datas) |
-| GET    | /api/bookings/\:id | 🔒   | Buscar reserva por ID              |
-| PUT    | /api/bookings/\:id | 🔒   | Atualizar reserva                  |
-| DELETE | /api/bookings/\:id | 🔒   | Deletar reserva                    |
+**Filtros de `/api/spaces`:** `city`, `search`, `amenities` (ex.: `wifi,cafe`), `minCapacity`, `maxPrice`, `from` + `to`, `sortBy`, `order`, `page` e `limit`.
 
-## 🛠 Tecnologias utilizadas
+**Comodidades:** `wifi`, `cafe`, `ar_condicionado`, `estacionamento`, `sala_reuniao`, `impressora`, `cozinha`, `armarios`, `acessibilidade` e `pet_friendly`.
 
-- **Node.js** 22.x
+### Exemplo
 
-- **Express** 4.x
+```bash
+# Espaços com wi-fi e café livres de 10 a 15 de dezembro em João Pessoa
+curl "http://localhost:3000/api/spaces?city=João%20Pessoa&amenities=wifi,cafe&from=2026-12-10&to=2026-12-15"
 
-- **MongoDB** 7.x
+# Reservar (check-in 10/12, check-out 15/12 = 5 diárias)
+curl -X POST http://localhost:3000/api/bookings \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"spaceId":"<ID>","startDate":"2026-12-10","endDate":"2026-12-15"}'
+```
 
-- **Mongoose** para modelagem de dados
+```json
+{
+  "id": "6760...",
+  "space": { "name": "Cowork Tambaú", "city": "João Pessoa", "pricePerDay": 45 },
+  "startDate": "2026-12-10T00:00:00.000Z",
+  "endDate": "2026-12-15T00:00:00.000Z",
+  "days": 5,
+  "totalPrice": 225,
+  "status": "confirmed"
+}
+```
 
-- **JWT** para autenticação
+Se o período já estiver ocupado, a resposta é `409`: `{ "error": "Espaço já reservado para o período selecionado" }`.
 
-- **Swagger** para documentação (em desenvolvimento)
+## 🧪 Testes
 
-- **Nodemon** para desenvolvimento
+```bash
+npm test               # MongoDB em memória
+npm run test:coverage
+npm run lint
+```
+
+## 📄 Licença
+
+MIT. Veja [LICENSE](LICENSE).
+
+---
+
+Feito por [Roberto Filho](https://github.com/robertofilho0) · [LinkedIn](https://www.linkedin.com/in/roberto-filho-393b372b2/)
