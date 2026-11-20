@@ -79,12 +79,12 @@ describe('Espaços', () => {
   });
 
   it('filtra espaços livres em um período', async () => {
-    const a = await createSpace(admin, { name: 'A' });
-    await createSpace(admin, { name: 'B' });
+    const a = await createSpace(admin, { name: 'Sala A' });
+    await createSpace(admin, { name: 'Sala B' });
     await book(ana, a.id, 3, 6);
 
     const livres = await request(app).get(`/api/spaces?from=${day(4)}&to=${day(5)}`);
-    expect(livres.body.data.map((s) => s.name)).toEqual(['B']);
+    expect(livres.body.data.map((s) => s.name)).toEqual(['Sala B']);
 
     const depois = await request(app).get(`/api/spaces?from=${day(6)}&to=${day(8)}`);
     expect(depois.body.meta.total).toBe(2);
